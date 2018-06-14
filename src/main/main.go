@@ -43,7 +43,8 @@ func main() {
 	// LOOP START!
 	for {
 		fresp := FetchRepsonse{
-			Serv: make(map[Service]Status),
+			Serv: make([]Service, 0),
+			Stat: make([]Status, 0),
 			Noti: make([]Notification, 0),
 		}
 		<-time.After(time.Duration(timeout) * time.Millisecond)

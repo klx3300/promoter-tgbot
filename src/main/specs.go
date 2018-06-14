@@ -20,6 +20,7 @@ type Notification struct {
 }
 
 type FetchRepsonse struct {
-	Serv map[Service]Status
+	Serv []Service
+	Stat []Status
 	Noti []Notification
 }

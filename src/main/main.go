@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"configrd"
 	"encoding/json"
+	"io"
 	"logger"
 	"net/http"
 	"os"
@@ -48,29 +49,37 @@ func main() {
 			Noti: make([]Notification, 0),
 		}
 		<-time.After(time.Duration(timeout) * time.Millisecond)
+		// logger.Log.Logln(logger.LEVEL_DEBUG, "Looped!")
 		resp, err := http.Get(conf["CollectorAddr"])
 		if err != nil {
 			logger.Log.Logln(logger.LEVEL_WARNING, "Unable to connect to collector,", err)
-			return
+			continue
 		}
+		// logger.Log.Logln(logger.LEVEL_DEBUG, resp)
 		jdecoder := json.NewDecoder(resp.Body)
 		err = jdecoder.Decode(&fresp)
+		// logger.Log.Logln(logger.LEVEL_INFO, "decode completed")
 		if err != nil {
 			logger.Log.Logln(logger.LEVEL_WARNING, "Unable to unmarshal response,", err)
-			return
+			continue
 		}
+		logger.Log.Logln(logger.LEVEL_INFO, "fresp", fresp)
 		for _, item := range fresp.Noti {
-			msg := SendMessageParam{
-				chat_id:    chatid,
-				parse_mode: "Markdown",
-			}
-			msg.text = "# " + item.Heading + "\n## " + item.Tm.Format(time.UnixDate) + "\n" + item.Content
+			// logger.Log.Logln(logger.LEVEL_INFO, item)
+			msg := make(map[string]string)
+			msg["chat_id"] = strconv.Itoa(chatid)
+			msg["parse_mode"] = "Markdown"
+			msg["text"] = "*" + item.Heading + "*\n_" + item.Tm.Format(time.UnixDate) + "_\n" + item.Content
 			msgencoded, _ := json.Marshal(msg)
+			// logger.Log.Logln(logger.LEVEL_INFO, "to be sent:", string(msgencoded))
 			resp, err := http.Post("https://api.telegram.org/"+conf["BotId"]+"/sendMessage", "application/json", bytes.NewReader(msgencoded))
 			if err != nil {
 				logger.Log.Logln(logger.LEVEL_WARNING, "Unable to post to telegram API,", err)
+				continue
 			}
-			logger.Log.Logln(logger.LEVEL_INFO, resp.Body)
+			buffer := make([]byte, 999)
+			io.ReadFull(resp.Body, buffer)
+			logger.Log.Logln(logger.LEVEL_INFO, "tg response:", string(buffer))
 		}
 	}
 }
